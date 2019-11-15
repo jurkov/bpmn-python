@@ -5,7 +5,7 @@ Package provides functionality for exporting graph representation to BPMN 2.0 XM
 import errno
 import os
 import xml.etree.cElementTree as eTree
-from io import StringIO
+from io import BytesIO
 
 import bpmn_python.bpmn_python_consts as consts
 
@@ -604,9 +604,9 @@ class BpmnDiagramGraphExport(object):
 
         BpmnDiagramGraphExport.indent(definitions)
         tree = eTree.ElementTree(definitions)
-        stream = StringIO()
+        stream = BytesIO()
         tree.write(stream, encoding='utf-8', xml_declaration=True)
-        return stream.getvalue()
+        return stream.getvalue().decode('utf-8')
 
     @staticmethod
     def export_xml_file_no_di(directory, filename, bpmn_diagram):
@@ -677,9 +677,9 @@ class BpmnDiagramGraphExport(object):
 
         BpmnDiagramGraphExport.indent(definitions)
         tree = eTree.ElementTree(definitions)
-        stream = StringIO()
+        stream = BytesIO()
         tree.write(stream, encoding='utf-8', xml_declaration=True)
-        return stream.getvalue()
+        return stream.getvalue().decode('utf-8')
 
     # Helper methods
     @staticmethod
