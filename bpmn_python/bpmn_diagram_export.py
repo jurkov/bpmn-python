@@ -5,6 +5,7 @@ Package provides functionality for exporting graph representation to BPMN 2.0 XM
 import errno
 import os
 import xml.etree.cElementTree as eTree
+from io import StringIO
 
 import bpmn_python.bpmn_python_consts as consts
 
@@ -512,6 +513,100 @@ class BpmnDiagramGraphExport(object):
             if exception.errno != errno.EEXIST:
                 raise
         tree.write(directory + filename, encoding='utf-8', xml_declaration=True)
+
+    @staticmethod
+    def export_xml(bpmn_diagram):
+        """
+        Exports diagram inner graph to BPMN 2.0 XML str (with Diagram Interchange data).
+        :param bpmn_diagram: BPMNDiagramGraph class instantion representing a BPMN process diagram.
+        """
+        diagram_attributes = bpmn_diagram.diagram_attributes
+        plane_attributes = bpmn_diagram.plane_attributes
+        collaboration = bpmn_diagram.collaboration
+        process_elements_dict = bpmn_diagram.process_elements
+        definitions = BpmnDiagramGraphExport.export_definitions_element()
+
+        [_, plane] = BpmnDiagramGraphExport.export_diagram_plane_elements(definitions, diagram_attributes,
+                                                                          plane_attributes)
+
+        if collaboration is not None and len(collaboration) > 0:
+            message_flows = collaboration[consts.Consts.message_flows]
+            participants = collaboration[consts.Consts.participants]
+            collaboration_xml = eTree.SubElement(definitions, consts.Consts.collaboration)
+            collaboration_xml.set(consts.Consts.id, collaboration[consts.Consts.id])
+
+            for message_flow_id, message_flow_attr in message_flows.items():
+                message_flow = eTree.SubElement(collaboration_xml, consts.Consts.message_flow)
+                message_flow.set(consts.Consts.id, message_flow_id)
+                message_flow.set(consts.Consts.name, message_flow_attr[consts.Consts.name])
+                message_flow.set(consts.Consts.source_ref, message_flow_attr[consts.Consts.source_ref])
+                message_flow.set(consts.Consts.target_ref, message_flow_attr[consts.Consts.target_ref])
+
+                message_flow_params = bpmn_diagram.get_flow_by_id(message_flow_id)[2]
+                output_flow = eTree.SubElement(plane, BpmnDiagramGraphExport.bpmndi_namespace + consts.Consts.bpmn_edge)
+                output_flow.set(consts.Consts.id, message_flow_id + "_gui")
+                output_flow.set(consts.Consts.bpmn_element, message_flow_id)
+                waypoints = message_flow_params[consts.Consts.waypoints]
+                for waypoint in waypoints:
+                    waypoint_element = eTree.SubElement(output_flow, "omgdi:waypoint")
+                    waypoint_element.set(consts.Consts.x, waypoint[0])
+                    waypoint_element.set(consts.Consts.y, waypoint[1])
+
+            for participant_id, participant_attr in participants.items():
+                participant = eTree.SubElement(collaboration_xml, consts.Consts.participant)
+                participant.set(consts.Consts.id, participant_id)
+                participant.set(consts.Consts.name, participant_attr[consts.Consts.name])
+                participant.set(consts.Consts.process_ref, participant_attr[consts.Consts.process_ref])
+
+                output_element_di = eTree.SubElement(plane, BpmnDiagramGraphExport.bpmndi_namespace +
+                                                     consts.Consts.bpmn_shape)
+                output_element_di.set(consts.Consts.id, participant_id + "_gui")
+                output_element_di.set(consts.Consts.bpmn_element, participant_id)
+                output_element_di.set(consts.Consts.is_horizontal, participant_attr[consts.Consts.is_horizontal])
+                bounds = eTree.SubElement(output_element_di, "omgdc:Bounds")
+                bounds.set(consts.Consts.width, participant_attr[consts.Consts.width])
+                bounds.set(consts.Consts.height, participant_attr[consts.Consts.height])
+                bounds.set(consts.Consts.x, participant_attr[consts.Consts.x])
+                bounds.set(consts.Consts.y, participant_attr[consts.Consts.y])
+
+        for process_id in process_elements_dict:
+            process_element_attr = process_elements_dict[process_id]
+            process = BpmnDiagramGraphExport.export_process_element(definitions, process_id, process_element_attr)
+            if consts.Consts.lane_set in process_element_attr:
+                BpmnDiagramGraphExport.export_lane_set(process, process_element_attr[consts.Consts.lane_set], plane)
+
+            # for each node in graph add correct type of element, its attributes and BPMNShape element
+            nodes = bpmn_diagram.get_nodes_list_by_process_id(process_id)
+            for node in nodes:
+                node_id = node[0]
+                params = node[1]
+                BpmnDiagramGraphExport.export_node_data(bpmn_diagram, node_id, params, process)
+                # BpmnDiagramGraphExport.export_node_di_data(node_id, params, plane)
+
+            # for each edge in graph add sequence flow element, its attributes and BPMNEdge element
+            flows = bpmn_diagram.get_flows_list_by_process_id(process_id)
+            for flow in flows:
+                params = flow[2]
+                BpmnDiagramGraphExport.export_flow_process_data(params, process)
+                # BpmnDiagramGraphExport.export_flow_di_data(params, plane)
+
+        # Export DI data
+        nodes = bpmn_diagram.get_nodes()
+        for node in nodes:
+            node_id = node[0]
+            params = node[1]
+            BpmnDiagramGraphExport.export_node_di_data(node_id, params, plane)
+
+        flows = bpmn_diagram.get_flows()
+        for flow in flows:
+            params = flow[2]
+            BpmnDiagramGraphExport.export_flow_di_data(params, plane)
+
+        BpmnDiagramGraphExport.indent(definitions)
+        tree = eTree.ElementTree(definitions)
+        stream = StringIO()
+        tree.write(stream, encoding='utf-8', xml_declaration=True)
+        return stream.getvalue()
 
     @staticmethod
     def export_xml_file_no_di(directory, filename, bpmn_diagram):
