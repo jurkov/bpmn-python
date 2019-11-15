@@ -647,6 +647,40 @@ class BpmnDiagramGraphExport(object):
                 raise
         tree.write(directory + filename, encoding='utf-8', xml_declaration=True)
 
+    @staticmethod
+    def export_xml_no_di(bpmn_diagram):
+        """
+        Exports diagram inner graph to BPMN 2.0 XML (without Diagram Interchange data).
+
+        :param bpmn_diagram: BPMNDiagramGraph class instance representing a BPMN process diagram.
+        """
+        diagram_graph = bpmn_diagram.diagram_graph
+        process_elements_dict = bpmn_diagram.process_elements
+        definitions = BpmnDiagramGraphExport.export_definitions_element()
+
+        for process_id in process_elements_dict:
+            process_element_attr = process_elements_dict[process_id]
+            process = BpmnDiagramGraphExport.export_process_element(definitions, process_id, process_element_attr)
+
+            # for each node in graph add correct type of element, its attributes and BPMNShape element
+            nodes = diagram_graph.nodes(data=True)
+            for node in nodes:
+                node_id = node[0]
+                params = node[1]
+                BpmnDiagramGraphExport.export_node_data(bpmn_diagram, node_id, params, process)
+
+            # for each edge in graph add sequence flow element, its attributes and BPMNEdge element
+            flows = diagram_graph.edges(data=True)
+            for flow in flows:
+                params = flow[2]
+                BpmnDiagramGraphExport.export_flow_process_data(params, process)
+
+        BpmnDiagramGraphExport.indent(definitions)
+        tree = eTree.ElementTree(definitions)
+        stream = StringIO()
+        tree.write(stream, encoding='utf-8', xml_declaration=True)
+        return stream.getvalue()
+
     # Helper methods
     @staticmethod
     def indent(elem, level=0):
