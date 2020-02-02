@@ -34,7 +34,55 @@ class BpmnE2DiagramGraphImport(object):
         """ 
         TODO extend the above representation with e2 elements 
         """
+
+        activity_durations = bpmn_e2_diagram.activity_durations
+        monitoring_groups = bpmn_e2_diagram.monitoring_groups
+        activity_effects = bpmn_e2_diagram.activity_effects
+        decision_points = bpmn_e2_diagram.decision_points
+        associations = bpmn_e2_diagram.associations
+        
         document = BpmnE2DiagramGraphImport.read_xml_file(filepath)
+        extension_elements = document.getElementsByTagNameNS('*', 'extensionElements')[0]
+
+        BpmnE2DiagramGraphImport.import_activity_durations(extension_elements, activity_durations)
+
+    @staticmethod
+    def import_distribution_params(time_expected_dict, id, params) :
+    
+        for param in params: 
+            name = param.getAttribute('name')
+            value = param.getAttribute('value')
+            unit = param.getAttribute('unit')
+
+            time_expected_dict[id]['params'][name] = {
+                'value': value,
+                'unit': unit
+            }
+
+
+    @staticmethod
+    def import_activity_durations(extension_elements, activity_durations):
+        time_expected_xml = extension_elements.getElementsByTagNameNS('*', 'timeExpected')
+        time_expected_dict = {}
+        
+        for time_expected in time_expected_xml:
+            id = time_expected.getAttribute('id')
+            description = time_expected.getAttribute('description')
+            distribution = time_expected.getAttribute('probabilisticDistribution')
+            params = time_expected.getElementsByTagNameNS('*', 'param')
+
+            time_expected_dict[id] = {
+                'description': description, 
+                'distribution': distribution,
+                'params': {}
+            }
+
+            BpmnE2DiagramGraphImport.import_distribution_params(time_expected_dict, id, params)
+            
+        for key in time_expected_dict.keys():
+            activity_durations[key] = time_expected_dict[key]
+
+
 
     @staticmethod
     def read_xml_file(filepath):
