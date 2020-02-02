@@ -45,6 +45,7 @@ class BpmnE2DiagramGraphImport(object):
         extension_elements = document.getElementsByTagNameNS('*', 'extensionElements')[0]
 
         BpmnE2DiagramGraphImport.import_activity_durations(extension_elements, activity_durations)
+        BpmnE2DiagramGraphImport.import_associations(extension_elements, associations)
 
     @staticmethod
     def import_distribution_params(time_expected_dict, id, params) :
@@ -82,6 +83,27 @@ class BpmnE2DiagramGraphImport(object):
         for key in time_expected_dict.keys():
             activity_durations[key] = time_expected_dict[key]
 
+    
+
+    @staticmethod
+    def import_associations(extension_elements, associations): 
+        associations_xml = extension_elements.getElementsByTagNameNS('*', 'association')
+        associations_dict = {}
+
+        for association in associations_xml:
+            id = association.getAttribute('id')
+            sourceRef = association.getAttribute('sourceRef')
+            targetRef = association.getAttribute('targetRef')
+            direction = association.getAttribute('associationDirection')
+
+            associations_dict[id] = {
+                'sourceRef': sourceRef,
+                'targetRef': targetRef,
+                'associationDirection': direction
+            }
+            
+        for key in associations_dict:
+            associations[key] = associations_dict[key]
 
 
     @staticmethod
