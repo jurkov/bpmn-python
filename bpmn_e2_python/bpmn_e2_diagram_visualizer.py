@@ -22,23 +22,31 @@ def make_node(node):
 
     dot_str += f"{node[0]} ["
     dot_str += make_node_attributes(node)
-    print(node)
+
     dot_str += "]\n"
 
     return dot_str
 
-def make_edge(edge): 
+def make_edge(edge, associations, sequence_flows): 
     dot_str = ""
     sourceRef = edge[2]['sourceRef']
     targetRef = edge[2]['targetRef']
+    print(associations.values())
 
-    dot_str += f"{sourceRef} -> {targetRef}"
-    dot_str += "\n"
+    exists_association = list((filter(lambda x: x['sourceRef'] in sequence_flows \
+        and sequence_flows[x['sourceRef']]['sourceRef'] == sourceRef \
+        and sequence_flows[x['sourceRef']]['targetRef'] == targetRef, associations.values())))
+    
+    if (len(exists_association) == 0):
+        dot_str += f"{sourceRef} -> {targetRef}"
+        dot_str += "\n"
+    else:
+        print('hello')
     
     return dot_str   
 
 def begin_dot(file): 
-    begin = "digraph G {\n rankdir=LR\n"
+    begin = "digraph G {\n rankdir=LR\ngraph [splines=ortho]\n"
     file.write(begin)
 
 def make_activity_duration(activity_duration):
@@ -70,21 +78,28 @@ def make_decision_points(decision_point):
 
     dot_str += f'{key} [color="blue"'
     """ TODO attributes """
-    dot_str += "]"
+    dot_str += "]\n"
 
     return dot_str
 
 
 
-def make_association(association):
+def make_association(association, sequence_flows):
     key = association[0]
     value = association[1]
+    s_flow = sequence_flows.get(value["sourceRef"], None)
     dot_str = ""
 
     dot_str += f'{value["sourceRef"]} -> {value["targetRef"]} ['
     """ TODO attributes """
     dot_str += "]\n"
 
+    if (s_flow):
+        dot_str += f'{value["sourceRef"]} [width=0.01,height=0.01, shape=none, label=""]\n'
+        dot_str += f'{s_flow["sourceRef"]} -> {value["sourceRef"]} [arrowhead=none] \n'
+        dot_str += f'{value["sourceRef"]} -> {s_flow["targetRef"]}'
+        
+        
     dot_str += f'{{rank= same; {value["sourceRef"]};{value["targetRef"]}}}'
 
     return dot_str
@@ -98,12 +113,14 @@ def fill_dot(file, bpmn_e2_diagram):
     decision_points = bpmn_e2_diagram.decision_points
     associations = bpmn_e2_diagram.associations
 
+    sequence_flows = bpmn_e2_diagram.sequence_flows
+
     for node in nodes: 
         dot_node = make_node(node) 
         file.write(dot_node) 
 
     for edge in edges: 
-        dot_edge = make_edge(edge)
+        dot_edge = make_edge(edge, associations, sequence_flows)
         file.write(dot_edge)
 
     for activity_duration in activity_durations.items(): 
@@ -113,14 +130,14 @@ def fill_dot(file, bpmn_e2_diagram):
     for monitoring_group in monitoring_groups.items(): 
         dot_monitoring_group = make_monitoring_group(monitoring_group)
         file.write(dot_monitoring_group)
-    
-    for association in associations.items(): 
-        dot_association = make_association(association)
-        file.write(dot_association)
 
     for decision_point in decision_points.items(): 
         dot_decision_point = make_decision_points(decision_point)
         file.write(dot_decision_point)
+
+    for association in associations.items(): 
+        dot_association = make_association(association, sequence_flows)
+        file.write(dot_association)
 
 
 def end_dot(file):
