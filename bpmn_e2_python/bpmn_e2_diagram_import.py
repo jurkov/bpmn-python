@@ -45,6 +45,8 @@ class BpmnE2DiagramGraphImport(object):
         extension_elements = document.getElementsByTagNameNS('*', 'extensionElements')[0]
 
         BpmnE2DiagramGraphImport.import_activity_durations(extension_elements, activity_durations)
+        BpmnE2DiagramGraphImport.import_decision_points(extension_elements, decision_points)
+        BpmnE2DiagramGraphImport.import_monitoring_groups(extension_elements, monitoring_groups)
         BpmnE2DiagramGraphImport.import_associations(extension_elements, associations)
 
     @staticmethod
@@ -104,6 +106,60 @@ class BpmnE2DiagramGraphImport(object):
             
         for key in associations_dict:
             associations[key] = associations_dict[key]
+
+    @staticmethod
+    def import_monitoring_variables(monitoring_groups_dict, id, monitoring_variables):
+        
+        for monitoring_variable in monitoring_variables: 
+            variableId = monitoring_variable.getAttribute('id')
+            description = monitoring_variable.getAttribute('description')
+            required = monitoring_variable.getAttribute('required')
+            content = monitoring_variable.getAttribute('content')
+
+            monitoring_groups_dict[id]['monitoringVariables'][variableId] = {
+                'description': description,
+                'required': required,
+                'content': content
+            }
+
+    @staticmethod
+    def import_monitoring_groups(extension_elements, monitoring_groups):
+        monitoring_groups_xml = extension_elements.getElementsByTagNameNS('*', 'monitoringGroup')
+        monitoring_groups_dict = {}
+
+        for monitoring_group in monitoring_groups_xml: 
+            id = monitoring_group.getAttribute('id')
+            description = monitoring_group.getAttribute('description')
+            monitoring_variables = monitoring_group.getElementsByTagNameNS('*', 'monitoringVariable')
+
+            monitoring_groups_dict[id] = {
+                'description': description,
+                'monitoringVariables': {}
+            }
+
+            BpmnE2DiagramGraphImport.import_monitoring_variables(monitoring_groups_dict, id, monitoring_variables)
+
+        for key in monitoring_groups_dict.keys():
+            monitoring_groups[key] = monitoring_groups_dict[key]
+
+
+    @staticmethod 
+    def import_decision_points(extension_elements, decision_questions):
+        decision_questions_xml = extension_elements.getElementsByTagNameNS('*', 'decisionQuestion')
+        decision_questions_dict = {}
+
+        for decision_question in decision_questions_xml: 
+            id = decision_question.getAttribute('id')
+            description = decision_question.getAttribute('description')
+            condition = decision_question.getAttribute('condition')
+
+            decision_questions_dict[id] = {
+                'description': description,
+                'condition': condition
+            } 
+
+        for key in decision_questions_dict.keys():
+            decision_questions[key] = decision_questions_dict[key]
 
 
     @staticmethod
