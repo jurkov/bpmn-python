@@ -35,6 +35,7 @@ class BpmnE2DiagramGraphImport(object):
         TODO extend the above representation with e2 elements 
         """
 
+        diagram_graph = bpmn_e2_diagram.diagram_graph
         activity_durations = bpmn_e2_diagram.activity_durations
         monitoring_groups = bpmn_e2_diagram.monitoring_groups
         activity_effects = bpmn_e2_diagram.activity_effects
@@ -48,6 +49,39 @@ class BpmnE2DiagramGraphImport(object):
         BpmnE2DiagramGraphImport.import_decision_points(extension_elements, decision_points)
         BpmnE2DiagramGraphImport.import_monitoring_groups(extension_elements, monitoring_groups)
         BpmnE2DiagramGraphImport.import_associations(extension_elements, associations)
+        BpmnE2DiagramGraphImport.update_graph(bpmn_e2_diagram, associations)
+
+    @staticmethod
+    def update_graph_node(diagram_graph, association): 
+        node = diagram_graph.nodes[association['sourceRef']]
+
+        if 'extensionElements' in node:
+            node['extensionElements'].append(association['targetRef'])
+        else: 
+            node['extensionElements'] = []
+            node['extensionElements'].append(association['targetRef'])
+
+    @staticmethod 
+    def update_graph_edge(diagram_graph, sequence_flows, association):
+        sourceRef = sequence_flows[association['sourceRef']]['sourceRef']
+        targetRef = sequence_flows[association['sourceRef']]['targetRef']
+
+        edge = diagram_graph.edges[sourceRef, targetRef]
+        edge['decisionPoint'] = association['targetRef']
+
+    @staticmethod 
+    def update_graph(diagram, associations): 
+        diagram_graph = diagram.diagram_graph 
+        sequence_flows = diagram.sequence_flows
+
+        for association in associations.values(): 
+            try: 
+                BpmnE2DiagramGraphImport.update_graph_node(diagram_graph, association)
+            except: 
+                BpmnE2DiagramGraphImport.update_graph_edge(diagram_graph, sequence_flows, association)
+
+
+
 
     @staticmethod
     def import_distribution_params(time_expected_dict, id, params) :
