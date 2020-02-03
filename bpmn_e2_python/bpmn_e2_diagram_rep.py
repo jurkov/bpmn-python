@@ -13,10 +13,12 @@ import bpmn_python.bpmn_process_csv_export as bpmn_csv_export
 import bpmn_python.bpmn_process_csv_import as bpmn_csv_import
 import bpmn_python.bpmn_python_consts as consts
 
+import bpmn_python.bpmn_diagram_rep as bpmn_rep
+
 import bpmn_e2_python.bpmn_e2_diagram_import as bpmn_e2_import
 
 
-class BpmnE2DiagramGraph(object):
+class BpmnE2DiagramGraph(bpmn_rep.BpmnDiagramGraph):
     """
     Class BPMNE2DiagramGraph implements simple inner representation of BPMN-E2 diagram,
     based on NetworkX graph implementation
@@ -48,16 +50,7 @@ class BpmnE2DiagramGraph(object):
     bpmndi_namespace = "bpmndi:"
 
     def __init__(self):
-        """
-        Default constructor, initializes object fields with new instances.
-        """
-        self.diagram_graph = nx.Graph()
-        self.sequence_flows = {}
-        self.process_elements = {}
-        self.diagram_attributes = {}
-        self.plane_attributes = {}
-        self.collaboration = {}
-
+        super().__init__()
 
         """
         BPMN-E2 new elements
