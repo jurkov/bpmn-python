@@ -300,9 +300,9 @@ def place_element_in_grid(node_with_classification, grid, last_row, last_col, bp
         for flow_id in outgoing_flows:
             flow = bpmn_graph.get_flow_by_id(flow_id)
             successors_id_list.append(flow[2][consts.Consts.target_ref])
-        num_of_successors = len(successors_id_list)
         successor_node_list = [successor_node for successor_node in nodes_with_classification
                                       if successor_node[node_param_name][0] in successors_id_list]
+        num_of_successors = len(successor_node_list)
 
         if num_of_successors % 2 != 0:
             # if number of successors is even, put one half over the split, second half below
@@ -369,7 +369,8 @@ def insert_into_grid(grid, row, col, node_id):
     if occupied_cell:
         for grid_cell in grid:
             if grid_cell.row >= row:
-                grid_cell.row += consts.Consts.width
+                # grid_cell.row += consts.Consts.width
+                grid_cell.row += 1
     grid.append(cell_class.GridCell(row, col, node_id))
 
 

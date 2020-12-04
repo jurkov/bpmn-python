@@ -15,15 +15,13 @@ def read(fname):
 
 setup(
     name="bpmn_python",
-    version="0.0.19-SNAPSHOT",
+    version="0.0.19.5-SNAPSHOT",
     author="Izbela Smietana, Krzysztof Honkisz",
     # author_email = "honkiszkrzystof@gmail.com",
     description=("Python library that allows to import/export BPMN diagram (as an XML file) and provides a simple "
                  "visualization capabilities."),
     license="GNU GENERAL PUBLIC LICENSE",
     keywords=["bpmn", "xml"],
-    url="https://github.com/KrzyHonk/bpmn-python",
-    download_url="https://github.com/KrzyHonk/bpmn-python/tarball/0.0.19-SNAPSHOT",
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=read('requirements.txt').split('\n'),
