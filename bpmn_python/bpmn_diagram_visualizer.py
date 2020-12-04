@@ -74,6 +74,18 @@ def bpmn_diagram_to_png(bpmn_diagram, file_name):
     :param bpmn_diagram: an instance of BPMNDiagramGraph class,
     :param file_name: name of generated file.
     """
+    graph = bpmn_diagram_to_img_obj(bpmn_diagram)
+
+    graph.write(file_name + ".png", format='png')
+
+
+def bpmn_diagram_to_img_obj(bpmn_diagram):
+    """
+    Create a png picture for given diagram
+
+    :param bpmn_diagram: an instance of BPMNDiagramGraph class,
+    :param file_name: name of generated file.
+    """
     g = bpmn_diagram.diagram_graph
     graph = pydotplus.Dot()
 
@@ -90,5 +102,4 @@ def bpmn_diagram_to_png(bpmn_diagram, file_name):
     for edge in g.edges(data=True):
         e = pydotplus.Edge(src=edge[2].get(consts.Consts.source_ref), dst=edge[2].get(consts.Consts.target_ref), label=edge[2].get(consts.Consts.name))
         graph.add_edge(e)
-
-    graph.write(file_name + ".png", format='png')
+    return graph

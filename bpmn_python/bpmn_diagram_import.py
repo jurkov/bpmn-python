@@ -67,6 +67,55 @@ class BpmnDiagramGraphImport(object):
                     BpmnDiagramGraphImport.import_flow_di(diagram_graph, sequence_flows, message_flows, element)
 
     @staticmethod
+    def load_diagram_from_string(str, bpmn_diagram):
+        """
+        Reads an XML string from given string and maps it into inner representation of BPMN diagram.
+        Returns an instance of BPMNDiagramGraph class.
+
+        :param str: string with xml,
+        :param bpmn_diagram: an instance of BpmnDiagramGraph class.
+        """
+        diagram_graph = bpmn_diagram.diagram_graph
+        sequence_flows = bpmn_diagram.sequence_flows
+        process_elements_dict = bpmn_diagram.process_elements
+        diagram_attributes = bpmn_diagram.diagram_attributes
+        plane_attributes = bpmn_diagram.plane_attributes
+        collaboration = bpmn_diagram.collaboration
+
+        document = BpmnDiagramGraphImport.read_xml_string(str)
+        # According to BPMN 2.0 XML Schema, there's only one 'BPMNDiagram' and 'BPMNPlane'
+        diagram_element = document.getElementsByTagNameNS("*", "BPMNDiagram")[0]
+        plane_element = diagram_element.getElementsByTagNameNS("*", "BPMNPlane")[0]
+        BpmnDiagramGraphImport.import_diagram_and_plane_attributes(diagram_attributes, plane_attributes,
+                                                                   diagram_element, plane_element)
+
+        BpmnDiagramGraphImport.import_process_elements(document, diagram_graph, sequence_flows, process_elements_dict,
+                                                       plane_element)
+
+        collaboration_element_list = document.getElementsByTagNameNS("*", consts.Consts.collaboration)
+        if collaboration_element_list is not None and len(collaboration_element_list) > 0:
+            # Diagram has multiple pools and lanes
+            collaboration_element = collaboration_element_list[0]
+            BpmnDiagramGraphImport.import_collaboration_element(diagram_graph, collaboration_element, collaboration)
+
+        if consts.Consts.message_flows in collaboration:
+            message_flows = collaboration[consts.Consts.message_flows]
+        else:
+            message_flows = {}
+
+        participants = []
+        if consts.Consts.participants in collaboration:
+            participants = collaboration[consts.Consts.participants]
+
+        for element in utils.BpmnImportUtils.iterate_elements(plane_element):
+            if element.nodeType != element.TEXT_NODE:
+                tag_name = utils.BpmnImportUtils.remove_namespace_from_tag_name(element.tagName)
+                if tag_name == consts.Consts.bpmn_shape:
+                    BpmnDiagramGraphImport.import_shape_di(participants, diagram_graph, element)
+                elif tag_name == consts.Consts.bpmn_edge:
+                    BpmnDiagramGraphImport.import_flow_di(diagram_graph, sequence_flows, message_flows, element)
+
+    @staticmethod
     def import_collaboration_element(diagram_graph, collaboration_element, collaboration_dict):
         """
         Method that imports information from 'collaboration' element.
@@ -895,4 +944,14 @@ class BpmnDiagramGraphImport(object):
         :param filepath: filepath of source XML file.
         """
         dom_tree = minidom.parse(filepath)
+        return dom_tree
+
+    @staticmethod
+    def read_xml_string(str):
+        """
+        Reads BPMN 2.0 XML String from given string and returns xml.dom.xminidom.Document object.
+
+        :param filepath: filepath of source XML file.
+        """
+        dom_tree = minidom.parseString(str)
         return dom_tree

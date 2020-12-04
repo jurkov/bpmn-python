@@ -64,6 +64,16 @@ class BpmnDiagramGraph(object):
 
         bpmn_import.BpmnDiagramGraphImport.load_diagram_from_xml(filepath, self)
 
+    def load_diagram_from_xml_string(self, str):
+        """
+        Reads an XML string from given string and maps it into inner representation of BPMN diagram.
+        Returns an instance of BPMNDiagramGraph class.
+
+        :param str: string of xml.
+        """
+
+        bpmn_import.BpmnDiagramGraphImport.load_diagram_from_string(str, self)
+
     def export_xml_file(self, directory, filename):
         """
         Exports diagram inner graph to BPMN 2.0 XML file (with Diagram Interchange data).
@@ -72,6 +82,15 @@ class BpmnDiagramGraph(object):
         :param filename: string representing output file name.
         """
         bpmn_export.BpmnDiagramGraphExport.export_xml_file(directory, filename, self)
+
+    def export_xml_etree(self):
+        """
+        Exports diagram inner graph to BPMN 2.0 XML etree (with Diagram Interchange data).
+
+        :param directory: strings representing output directory,
+        :param filename: string representing output file name.
+        """
+        return bpmn_export.BpmnDiagramGraphExport.export_xml_etree(self)
 
     def export_xml_file_no_di(self, directory, filename):
         """
