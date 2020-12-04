@@ -93,7 +93,9 @@ def bpmn_diagram_to_img_obj(bpmn_diagram):
 
         if node[1].get(consts.Consts.type) == consts.Consts.task:
             n = pydotplus.Node(name=node[0], shape="box", style="rounded", label=node[1].get(consts.Consts.node_name))
-        elif node[1].get(consts.Consts.type) == consts.Consts.exclusive_gateway:
+        elif node[1].get(consts.Consts.type) in [consts.Consts.complex_gateway, consts.Consts.event_based_gateway,
+                                         consts.Consts.inclusive_gateway, consts.Consts.exclusive_gateway,
+                                         consts.Consts.parallel_gateway]:
             n = pydotplus.Node(name=node[0], shape="diamond", label=node[1].get(consts.Consts.node_name))
         else:
             n = pydotplus.Node(name=node[0], label=node[1].get(consts.Consts.node_name))
