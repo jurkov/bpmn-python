@@ -26,45 +26,9 @@ class BpmnDiagramGraphImport(object):
         :param filepath: string with output filepath,
         :param bpmn_diagram: an instance of BpmnDiagramGraph class.
         """
-        diagram_graph = bpmn_diagram.diagram_graph
-        sequence_flows = bpmn_diagram.sequence_flows
-        process_elements_dict = bpmn_diagram.process_elements
-        diagram_attributes = bpmn_diagram.diagram_attributes
-        plane_attributes = bpmn_diagram.plane_attributes
-        collaboration = bpmn_diagram.collaboration
-
         document = BpmnDiagramGraphImport.read_xml_file(filepath)
-        # According to BPMN 2.0 XML Schema, there's only one 'BPMNDiagram' and 'BPMNPlane'
-        diagram_element = document.getElementsByTagNameNS("*", "BPMNDiagram")[0]
-        plane_element = diagram_element.getElementsByTagNameNS("*", "BPMNPlane")[0]
-        BpmnDiagramGraphImport.import_diagram_and_plane_attributes(diagram_attributes, plane_attributes,
-                                                                   diagram_element, plane_element)
 
-        BpmnDiagramGraphImport.import_process_elements(document, diagram_graph, sequence_flows, process_elements_dict,
-                                                       plane_element)
-
-        collaboration_element_list = document.getElementsByTagNameNS("*", consts.Consts.collaboration)
-        if collaboration_element_list is not None and len(collaboration_element_list) > 0:
-            # Diagram has multiple pools and lanes
-            collaboration_element = collaboration_element_list[0]
-            BpmnDiagramGraphImport.import_collaboration_element(diagram_graph, collaboration_element, collaboration)
-
-        if consts.Consts.message_flows in collaboration:
-            message_flows = collaboration[consts.Consts.message_flows]
-        else:
-            message_flows = {}
-
-        participants = []
-        if consts.Consts.participants in collaboration:
-            participants = collaboration[consts.Consts.participants]
-
-        for element in utils.BpmnImportUtils.iterate_elements(plane_element):
-            if element.nodeType != element.TEXT_NODE:
-                tag_name = utils.BpmnImportUtils.remove_namespace_from_tag_name(element.tagName)
-                if tag_name == consts.Consts.bpmn_shape:
-                    BpmnDiagramGraphImport.import_shape_di(participants, diagram_graph, element)
-                elif tag_name == consts.Consts.bpmn_edge:
-                    BpmnDiagramGraphImport.import_flow_di(diagram_graph, sequence_flows, message_flows, element)
+        BpmnDiagramGraphImport.load_diagram_from_dom(bpmn_diagram, document)
 
     @staticmethod
     def load_diagram_from_string(str, bpmn_diagram):
@@ -75,6 +39,19 @@ class BpmnDiagramGraphImport(object):
         :param str: string with xml,
         :param bpmn_diagram: an instance of BpmnDiagramGraph class.
         """
+        document = BpmnDiagramGraphImport.read_xml_string(str)
+
+        BpmnDiagramGraphImport.load_diagram_from_dom(bpmn_diagram, document)
+
+    @staticmethod
+    def load_diagram_from_dom(bpmn_diagram, document):
+        """
+        Reads an dom from given XML dom and maps it into inner representation of BPMN diagram.
+        Returns an instance of BPMNDiagramGraph class.
+
+        :param str: xml dom,
+        :param bpmn_diagram: an instance of BpmnDiagramGraph class.
+        """
         diagram_graph = bpmn_diagram.diagram_graph
         sequence_flows = bpmn_diagram.sequence_flows
         process_elements_dict = bpmn_diagram.process_elements
@@ -82,31 +59,26 @@ class BpmnDiagramGraphImport(object):
         plane_attributes = bpmn_diagram.plane_attributes
         collaboration = bpmn_diagram.collaboration
 
-        document = BpmnDiagramGraphImport.read_xml_string(str)
+        definitions_element = document.getElementsByTagNameNS("*", consts.Consts.definitions)[0]
         # According to BPMN 2.0 XML Schema, there's only one 'BPMNDiagram' and 'BPMNPlane'
         diagram_element = document.getElementsByTagNameNS("*", "BPMNDiagram")[0]
         plane_element = diagram_element.getElementsByTagNameNS("*", "BPMNPlane")[0]
         BpmnDiagramGraphImport.import_diagram_and_plane_attributes(diagram_attributes, plane_attributes,
                                                                    diagram_element, plane_element)
-
         BpmnDiagramGraphImport.import_process_elements(document, diagram_graph, sequence_flows, process_elements_dict,
                                                        plane_element)
-
         collaboration_element_list = document.getElementsByTagNameNS("*", consts.Consts.collaboration)
         if collaboration_element_list is not None and len(collaboration_element_list) > 0:
             # Diagram has multiple pools and lanes
             collaboration_element = collaboration_element_list[0]
             BpmnDiagramGraphImport.import_collaboration_element(diagram_graph, collaboration_element, collaboration)
-
         if consts.Consts.message_flows in collaboration:
             message_flows = collaboration[consts.Consts.message_flows]
         else:
             message_flows = {}
-
         participants = []
         if consts.Consts.participants in collaboration:
             participants = collaboration[consts.Consts.participants]
-
         for element in utils.BpmnImportUtils.iterate_elements(plane_element):
             if element.nodeType != element.TEXT_NODE:
                 tag_name = utils.BpmnImportUtils.remove_namespace_from_tag_name(element.tagName)
@@ -404,26 +376,37 @@ class BpmnDiagramGraphImport(object):
                 if flow_node_element.hasAttribute(consts.Consts.name) \
                 else ""
         bpmn_graph.nodes[element_id][consts.Consts.process] = process_id
+        for attribute in flow_node_element._attrs:
+            if attribute not in bpmn_graph.nodes[element_id]:
+                bpmn_graph.nodes[element_id][attribute] = flow_node_element.getAttribute(attribute)
         process_attributes[consts.Consts.node_ids].append(element_id)
 
-        # add incoming flow node list
+        extensionElements_list = {}
         incoming_list = []
-        for tmp_element in utils.BpmnImportUtils.iterate_elements(flow_node_element):
-            if tmp_element.nodeType != tmp_element.TEXT_NODE:
-                tag_name = utils.BpmnImportUtils.remove_namespace_from_tag_name(tmp_element.tagName)
-                if tag_name == consts.Consts.incoming_flow:
-                    incoming_value = tmp_element.firstChild.nodeValue
-                    incoming_list.append(incoming_value)
-        bpmn_graph.nodes[element_id][consts.Consts.incoming_flow] = incoming_list
-
-        # add outgoing flow node list
         outgoing_list = []
         for tmp_element in utils.BpmnImportUtils.iterate_elements(flow_node_element):
             if tmp_element.nodeType != tmp_element.TEXT_NODE:
                 tag_name = utils.BpmnImportUtils.remove_namespace_from_tag_name(tmp_element.tagName)
+                # add extensionElements node list
+                if tag_name == consts.Consts.extension_elements:
+                    for tmp_extension_element in utils.BpmnImportUtils.iterate_elements(tmp_element):
+                        if tmp_extension_element.nodeType != tmp_extension_element.TEXT_NODE:
+                            extension_tag_name = tmp_extension_element.tagName
+                            extensionElements_list[extension_tag_name] = dict();
+                            if tmp_extension_element.hasAttributes():
+                                extensionElements_list[extension_tag_name]['attributes'] = tmp_extension_element._attrs
+                            extensionElements_list[extension_tag_name]['children'] = tmp_extension_element.childNodes
+
+                # add incoming flow node list
+                if tag_name == consts.Consts.incoming_flow:
+                    incoming_value = tmp_element.firstChild.nodeValue
+                    incoming_list.append(incoming_value)
+                # add outgoing flow node list
                 if tag_name == consts.Consts.outgoing_flow:
                     outgoing_value = tmp_element.firstChild.nodeValue
                     outgoing_list.append(outgoing_value)
+        bpmn_graph.nodes[element_id][consts.Consts.extension_elements] = extensionElements_list
+        bpmn_graph.nodes[element_id][consts.Consts.incoming_flow] = incoming_list
         bpmn_graph.nodes[element_id][consts.Consts.outgoing_flow] = outgoing_list
 
     @staticmethod

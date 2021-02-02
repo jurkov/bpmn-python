@@ -84,6 +84,9 @@ class Consts(object):
     bpmn_shape = "BPMNShape"
     bpmn_edge = "BPMNEdge"
 
+    # BPMN 2.0 extensionElements
+    extension_elements = "extensionElements"
+
     # BPMN 2.0 child element names
     incoming_flow = "incoming"
     incoming_flow_list = "incoming_flow_list"
